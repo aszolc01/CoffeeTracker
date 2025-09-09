@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caffeine Intake Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', Arial, sans-serif;
+            max-width: 400px;
+            margin: 40px auto;
+            padding: 24px;
+            background: #181a20;
+            color: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            font-weight: 700;
+            font-size: 2rem;
+            margin-bottom: 24px;
+            color: #fff;
+        }
+        .button-group {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+        button {
+            flex: 1;
+            padding: 18px 0;
+            border-radius: 12px;
+            border: none;
+            background: #282c34;
+            color: #fff;
+            font-size: 1.3rem;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+            transition: background 0.2s, transform 0.2s;
+        }
+        button:active {
+            background: #444;
+            transform: scale(0.98);
+        }
+        #reset {
+            background: #d33;
+            color: #fff;
+            font-weight: 700;
+        }
+        #cup-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 32px 0 16px 0;
+        }
+        #cup {
+            width: 100px;
+            height: 120px;
+            position: relative;
+            margin-bottom: 8px;
+        }
+        /* Cup SVG styling */
+        #cup svg {
+            width: 100px;
+            height: 120px;
+            display: block;
+        }
+        #coffee-fill {
+            transition: height 0.3s;
+        }
+        #indicator-label {
+            text-align: center;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #f5f5f5;
+            margin-top: 10px;
+            margin-bottom: 0;
+        }
+        h2 {
+            font-size: 1.2rem;
+            color: #f5f5f5;
+            margin-top: 32px;
+            margin-bottom: 12px;
+        }
+        ul {
+            padding-left: 0;
+            margin: 0;
+        }
+        li {
+            background: none;
+            border-radius: 0;
+            margin-bottom: 8px;
+            padding: 0;
+            font-size: 1.1rem;
+            color: #f5f5f5;
+            list-style: none;
+        }
+        #warning {
+            display: none;
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #d33;
+            color: #fff;
+            font-size: 2rem;
+            font-weight: 700;
+            text-align: center;
+            padding: 32px 0 32px 0;
+            z-index: 100;
+            box-shadow: 0 -2px 16px rgba(211,51,51,0.3);
+        }
+        @media (max-width: 600px) {
+            body { max-width: 98vw; padding: 4vw; }
+            .button-group { flex-direction: column; gap: 12px; }
+            button { margin: 0; font-size: 1.1rem; padding: 14px 0; }
+            #cup { width: 80px; height: 96px; }
+            #cup svg { width: 80px; height: 96px; }
+            #indicator-label { font-size: 1.1rem; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Caffeine Intake Tracker</h1>
+    <div class="button-group">
+        <button onclick="logBeverage('espresso')">Espresso</button>
+        <button onclick="logBeverage('americano')">Americano</button>
+        <button onclick="logBeverage('cappuccino')">Cappuccino</button>
+        <button id="reset" onclick="resetTracker()">RESET</button>
+    </div>
+    <div id="cup-container">
+        <div id="cup">
+            <svg viewBox="0 0 120 120">
+                <!-- Cup body -->
+                <path d="M30 40 Q20 110 60 110 Q100 110 90 40 Q60 20 30 40 Z" fill="#eee" stroke="#ccc" stroke-width="3" />
+                <!-- Coffee fill (dynamic) -->
+                <clipPath id="cup-clip">
+                    <path d="M30 40 Q20 110 60 110 Q100 110 90 40 Q60 20 30 40 Z" />
+                </clipPath>
+                <rect id="coffee-fill" x="21" y="110" width="78" height="0" fill="#6f4e37" clip-path="url(#cup-clip)" />
+                <!-- Cup rim -->
+                <ellipse cx="60" cy="40" rx="30" ry="10" fill="#eee" stroke="#ccc" stroke-width="3" />
+                <!-- Handle -->
+                <path d="M100 60 Q115 70 100 100" fill="none" stroke="#ccc" stroke-width="6" />
+            </svg>
+        </div>
+        <div id="indicator-label">0 mg / 400 mg</div>
+    </div>
+    <div id="warning">Watch out! You're gonna die!</div>
+    <h2>Consumption Log</h2>
+    <ul id="log"></ul>
+    <script>
+        const caffeineValues = { espresso: 60, americano: 150, cappuccino: 80 };
+        const dailyLimit = 400;
+        let totalCaffeine = 0;
+        let logEntries = [];
+
+        function logBeverage(type) {
+            const amount = caffeineValues[type];
+            totalCaffeine += amount;
+            logEntries.push({ type, amount, time: new Date().toLocaleTimeString() });
+            updateUI();
+        }
+
+        function resetTracker() {
+            totalCaffeine = 0;
+            logEntries = [];
+            updateUI();
+        }
+
+        function updateUI() {
+            // Update cup fill
+            const percent = Math.min((totalCaffeine / dailyLimit) * 100, 100);
+            const maxFill = 70; // max height of coffee fill in SVG
+            const fillHeight = maxFill * percent / 100;
+            const fillY = 110 - fillHeight;
+            const coffeeFill = document.getElementById('coffee-fill');
+            coffeeFill.setAttribute('y', fillY);
+            coffeeFill.setAttribute('height', fillHeight);
+            document.getElementById('indicator-label').textContent = `${totalCaffeine} mg / ${dailyLimit} mg`;
+            // Show warning if limit exceeded
+            document.getElementById('warning').style.display = percent >= 100 ? 'block' : 'none';
+            // Update log
+            const log = document.getElementById('log');
+            log.innerHTML = logEntries.map(e => `<li>${capitalize(e.type)} - ${e.amount}mg at ${e.time}</li>`).join('');
+        }
+
+        function capitalize(str) {
+            return str.charAt(0).toUpperCase() + str.slice(1);
+        }
+    </script>
+</body>
+</html>
